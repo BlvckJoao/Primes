@@ -13,7 +13,32 @@
 
 #include "exercicio.h"
 
-/* ================= UTIL ================= */
+
+static ssize_t write_all(int fd, const void *buf, size_t count) {
+    const char *p = buf;
+    size_t left = count;
+    while (left > 0) {
+        ssize_t w = write(fd, p, left);
+        if (w < 0) return -1;
+        p += w;
+        left -= (size_t)w;
+    }
+    return (ssize_t)count;
+}
+
+static ssize_t read_all(int fd, void *buf, size_t count) {
+    char *p = buf;
+    size_t left = count;
+    while (left > 0) {
+        ssize_t r = read(fd, p, left);
+        if (r < 0) return -1;
+        if (r == 0) break; /* EOF */
+        p += r;
+        left -= (size_t)r;
+    }
+    return (ssize_t)(count - left);
+}
+
 
 int* partition_interval(int interval, int partitions) {
     if (interval <= 0 || partitions <= 0) return NULL;
@@ -36,7 +61,6 @@ static double diff_ms(struct timespec a, struct timespec b) {
            (b.tv_nsec - a.tv_nsec) / 1e6;
 }
 
-/* ================= PRIMOS ================= */
 
 int is_prime(int n) {
     if (n < 2) return 0;
@@ -65,8 +89,6 @@ uint64_t count_primes_seq(int N) {
     return cnt;
 }
 
-/* ================= PARALELO ================= */
-
 uint64_t count_primes_par(int N, int P, ipc ip) {
     if (N < 2) return 0;
 
@@ -88,7 +110,6 @@ uint64_t count_primes_par(int N, int P, ipc ip) {
 
     uint64_t result = 0;
 
-    /* ---------- SHARED MEMORY ---------- */
     if (ip == SHM) {
         uint64_t *shm = mmap(NULL,
                              workers * sizeof(uint64_t),
@@ -125,7 +146,6 @@ uint64_t count_primes_par(int N, int P, ipc ip) {
         munmap(shm, workers * sizeof(uint64_t));
     }
 
-    /* ---------- PIPES ---------- */
     else {
         int (*pipes)[2] = malloc(workers * sizeof(int[2]));
         if (!pipes) {
@@ -159,7 +179,11 @@ uint64_t count_primes_par(int N, int P, ipc ip) {
                 int end   = 2 + bounds[i + 1] - 1;
                 uint64_t cnt = count_primes_in_range(start, end);
 
-                write(pipes[i][1], &cnt, sizeof(cnt));
+                if (write_all(pipes[i][1], &cnt, sizeof(cnt)) != (ssize_t)sizeof(cnt)) {
+                    perror("write");
+                    close(pipes[i][1]);
+                    _exit(1);
+                }
                 close(pipes[i][1]);
                 _exit(0);
             }
@@ -170,7 +194,12 @@ uint64_t count_primes_par(int N, int P, ipc ip) {
 
         for (int i = 0; i < workers; ++i) {
             uint64_t cnt = 0;
-            read(pipes[i][0], &cnt, sizeof(cnt));
+            ssize_t rr = read_all(pipes[i][0], &cnt, sizeof(cnt));
+            if (rr != (ssize_t)sizeof(cnt)) {
+                if (rr < 0) perror("read");
+                /* if partial/EOF, treat as zero count */
+                cnt = 0;
+            }
             close(pipes[i][0]);
             if (pids[i] > 0) waitpid(pids[i], NULL, 0);
             result += cnt;
@@ -184,7 +213,6 @@ uint64_t count_primes_par(int N, int P, ipc ip) {
     return result;
 }
 
-/* ================= MAIN ================= */
 
 int main(int argc, char **argv) {
     if (argc < 3) {
