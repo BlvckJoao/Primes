@@ -1,0 +1,7 @@
+/home/joao-pedro/Área de trabalho/Projetos/LPII/build/CMakeFiles/exercicio.dir
+/home/joao-pedro/Área de trabalho/Projetos/LPII/build/CMakeFiles/edit_cache.dir
+/home/joao-pedro/Área de trabalho/Projetos/LPII/build/CMakeFiles/rebuild_cache.dir
+/home/joao-pedro/Área de trabalho/Projetos/LPII/build/CMakeFiles/list_install_components.dir
+/home/joao-pedro/Área de trabalho/Projetos/LPII/build/CMakeFiles/install.dir
+/home/joao-pedro/Área de trabalho/Projetos/LPII/build/CMakeFiles/install/local.dir
+/home/joao-pedro/Área de trabalho/Projetos/LPII/build/CMakeFiles/install/strip.dir

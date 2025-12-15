@@ -1,0 +1,1 @@
+/usr/bin/cc -O3 -DNDEBUG CMakeFiles/exercicio.dir/src/exercicio.c.o -o bin/exercicio 
